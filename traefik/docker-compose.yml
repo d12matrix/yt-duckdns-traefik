@@ -1,0 +1,59 @@
+volumes:
+  traefik-acme:
+  traefik-certs:
+networks:
+  traefik:
+    external: true
+services:
+  traefik-proxy:
+    image: traefik:v3.0
+    ports:
+      # HTTP(S)
+      - "80:80"
+      - "443:443"
+      # Web UI
+      - "8080:8080"
+    networks:
+      - traefik
+    volumes:
+      # Docker'ı görebilmesi için
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Sertifikaları saklayabilsin
+      - traefik-certs:/tools/certs
+      - traefik-acme:/acme
+      # Yanındaki ayar dosyalarını yüklesin
+      # ileride Docker dışındaki hedefleri traefik ile yönetebilmek için
+      - ./rules:/rules:rw
+    restart: unless-stopped
+    environment:
+      - DUCKDNS_TOKEN=1-1-1-1-1-1-1-1 # DuckDNS Token
+    command:
+      # Paneli aç
+      - --log.level=DEBUG
+      - --api.dashboard=true
+      - --api.insecure=true
+
+      # Girişleri ayarla
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.certresolver=leresolver
+      - --entrypoints.websecure.http.tls.domains[0].main=d12matrix.duckdns.org
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.d12matrix.duckdns.org
+      
+      # Docker konteynırlarını takip etsin
+      - --providers.docker=true
+      - --providers.docker.network=traefik
+      # Bu klasör altına konulan ayarları takip et
+      - --providers.file.directory=/rules
+      # Gelen her sertifikayı kabul et
+      - --serversTransport.insecureSkipVerify=true
+      # TLS sertifikaları için DuckDNS kullan
+      - --certificatesresolvers.leresolver.acme.email=my@email.com # Let's Encrypt için email
+      - --certificatesresolvers.leresolver.acme.dnsChallenge.provider=duckdns 
+      - --certificatesresolvers.leresolver.acme.storage=/acme/acme.json
+      - --certificatesresolvers.leresolver.acme.dnschallenge=true
+      - --certificatesresolvers.leresolver.acme.dnschallenge.delaybeforecheck=0
+      - --certificatesresolvers.leresolver.acme.dnschallenge.resolvers[0]=8.8.4.4:53
+      - --certificatesresolvers.leresolver.acme.dnschallenge.resolvers[1]=8.8.8.8:53

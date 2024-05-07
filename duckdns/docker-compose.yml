@@ -1,0 +1,11 @@
+services:
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    container_name: duckdns
+    environment:
+      - SUBDOMAINS=d12matrix
+      - TOKEN=1-1-1-1-1-1-1-1
+      - UPDATE_IP=ipv4
+    volumes:
+      - ./config:/config #optional
+    restart: unless-stopped
