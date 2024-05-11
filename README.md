@@ -30,14 +30,15 @@ sudo netplan try
 
 
 ## Plan
-1. Traefik için network
+1. DuckDNS.org'da hesap ve domain alımı
+2. Traefik için network
     ```bash
     $ sudo docker network create traefik
     ```
 2. [Traefik](./traefik/docker-compose.yml) düzenle ve çalıştır
 3. PiHole için hazırlık:
     SystemD yüzünden bazı ayarları değiştirmek gerekiyor.
-    `/etc/systemd/resolved.conf.d/adguardhome.conf`
+    `/etc/systemd/resolved.conf.d/pihole.conf`
     ```toml
     [Resolve]
     DNS=127.0.0.1
@@ -51,9 +52,12 @@ sudo netplan try
     ```
 4. [PiHole](./pihole/docker-compose.yml) düzenle ve çalıştır
 5. PiHole için modemde DNS ayarını yap.
-6. [Wg-Easy](./wgeasy/docker-compose.yml) düzenle ve çalıştır
-7. [Watchtower](./watchtower/docker-compose.yml) çalıştır.
-8. Yeni servis eklemek:
+6. PiHole'a erişim için Hosts dosyasını editle.
+7. PiHole'da domaini sunucu adresine yönlendir.
+8. [Wg-Easy](./wgeasy/docker-compose.yml) düzenle ve çalıştır
+9. [Watchtower](./watchtower/docker-compose.yml) çalıştır.
+10. Dinamik DNS güncellemesi için [DuckDNS](./duckdns/docker-compose.yml) düzenle ve çalıştır. 
+11. Yeni servis eklemek:
     ```yaml
     networks:
       traefik:
@@ -68,6 +72,8 @@ sudo netplan try
         - "traefik.enable=true"
         - "traefik.http.routers.new-service.rule=Host(`new-service.d12matrix.duckdns.org`)"
         - "traefik.http.routers.new-service.entrypoints=websecure"
+        - "traefik.http.middlewares.pihole-admin-redirect.addPrefix.prefix=/admin"
+        - "traefik.http.routers.pihole.middlewares=pihole-admin-redirect"
         - "traefik.http.services.new-serviced.loadbalancer.server.port=8080"
         - "traefik.http.routers.new-service.service=new-service"
     ```
